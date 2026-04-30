@@ -2,7 +2,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import sqlite3
 
-TOKEN = "YOUR_NEW_BOT_TOKEN"
+TOKEN = "8350441049:AAHEaYW3qaJPT0k761ScXDUqgufhwomSErI"
 
 # ================= DB =================
 conn = sqlite3.connect("movies.db", check_same_thread=False)
