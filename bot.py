@@ -8,6 +8,7 @@ from telegram.ext import (
 )
 from telegram import Update
 from admin import admin_panel, admin_button
+from premium import send_temp_movie
 import sqlite3
 
 TOKEN = "8350441049:AAHEaYW3qaJPT0k761ScXDUqgufhwomSErI"
@@ -23,14 +24,17 @@ CREATE TABLE IF NOT EXISTS movies (
     file_id TEXT
 )
 """)
-
 conn.commit()
 
-# ================= CLEAN NAME =================
+# ================= CLEAN =================
 def clean(name):
     return name.lower().strip().replace(".mp4", "")
 
-# ================= SAVE MOVIE =================
+# ================= START =================
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🎬 Bot ready! Send movie with caption")
+
+# ================= SAVE =================
 async def save_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.video:
         file_id = update.message.video.file_id
@@ -41,16 +45,17 @@ async def save_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         name = clean(update.message.caption)
 
-        print("SAVED:", name)   # 👈 add this
+        print("SAVED:", name)
 
-        cur.execute("INSERT INTO movies VALUES (?, ?, ?)", (name, 1, file_id))
+        cur.execute(
+            "INSERT INTO movies VALUES (?, ?, ?)",
+            (name, 1, file_id)
+        )
         conn.commit()
 
         await update.message.reply_text("✅ Movie saved 👍")
-        async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await update.message.reply_text("🎬 Bot ready! Send movie with caption")
 
-# ================= START =================
+# ================= SEARCH =================
 async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = clean(update.message.text)
 
@@ -59,33 +64,14 @@ async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cur.execute("SELECT * FROM movies")
     print("DB DATA:", cur.fetchall())
 
-    cur.execute("SELECT file_id FROM movies WHERE name LIKE ?", (f"%{text}%",))
+    cur.execute(
+        "SELECT file_id FROM movies WHERE name LIKE ?",
+        (f"%{text}%",)
+    )
     data = cur.fetchone()
 
     if data:
         file_id = data[0]
-        from premium import send_temp_movie
-        await send_temp_movie(update, context, file_id)
-    else:
-        await update.message.reply_text("❌ Movie not found 😢")
-
-# ================= SEARCH =================
-async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = clean(update.message.text)
-
-    print("SEARCH:", text)   # STEP 2
-
-    # STEP 3 👇 DB check
-    cur.execute("SELECT * FROM movies")
-    print("DB DATA:", cur.fetchall())
-
-    # SEARCH FIX
-    cur.execute("SELECT file_id FROM movies WHERE name LIKE ?", (f"%{text}%",))
-    data = cur.fetchone()
-
-    if data:
-        file_id = data[0]
-        from premium import send_temp_movie
         await send_temp_movie(update, context, file_id)
     else:
         await update.message.reply_text("❌ Movie not found 😢")
