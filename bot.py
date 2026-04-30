@@ -49,7 +49,8 @@ async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = cur.fetchone()
 
     if data:
-        await context.bot.send_video(update.message.chat_id, data[0])
+        from premium import send_temp_movie
+await send_temp_movie(update, context, file_id)
     else:
         await update.message.reply_text("Movie not found 😢")
 
