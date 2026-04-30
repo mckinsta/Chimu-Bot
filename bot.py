@@ -47,6 +47,8 @@ async def save_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.commit()
 
         await update.message.reply_text("✅ Movie saved 👍")
+        async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await update.message.reply_text("🎬 Bot ready! Send movie with caption")
 
 # ================= START =================
 async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
