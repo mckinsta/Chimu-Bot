@@ -11,7 +11,7 @@ from admin import admin_panel, admin_button
 from premium import send_temp_movie
 import sqlite3
 
-TOKEN = "PUT_YOUR_TOKEN_HERE"
+TOKEN = "8350441049:AAHEaYW3qaJPT0k761ScXDUqgufhwomSErI"
 
 # ================= DB =================
 conn = sqlite3.connect("movies.db", check_same_thread=False)
