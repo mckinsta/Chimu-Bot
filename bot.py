@@ -55,7 +55,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ================= SEARCH =================
 async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = clean(update.message.text)
-
+    print("SEARCH:", text)
     cur.execute("SELECT file_id FROM movies WHERE name=?", (text,))
     data = cur.fetchone()
 
