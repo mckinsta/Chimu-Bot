@@ -49,8 +49,23 @@ async def save_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("✅ Movie saved 👍")
 
 # ================= START =================
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🎬 Bot ready! Send movie with caption")
+async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = clean(update.message.text)
+
+    print("SEARCH:", text)
+
+    cur.execute("SELECT * FROM movies")
+    print("DB DATA:", cur.fetchall())
+
+    cur.execute("SELECT file_id FROM movies WHERE name LIKE ?", (f"%{text}%",))
+    data = cur.fetchone()
+
+    if data:
+        file_id = data[0]
+        from premium import send_temp_movie
+        await send_temp_movie(update, context, file_id)
+    else:
+        await update.message.reply_text("❌ Movie not found 😢")
 
 # ================= SEARCH =================
 async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
