@@ -1,0 +1,14 @@
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ContextTypes
+
+TOKEN = "8350441049:AAHEaYW3qaJPT0k761ScXDUqgufhwomSErI"
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Bot working 👍")
+
+app = Application.builder().token(TOKEN).build()
+
+app.add_handler(CommandHandler("start", start))
+
+print("Bot starting...")
+app.run_polling(drop_pending_updates=True)
