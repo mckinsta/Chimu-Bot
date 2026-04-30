@@ -4,13 +4,13 @@ from telegram.ext import (
     MessageHandler,
     CallbackQueryHandler,
     ContextTypes,
-    filters)
-from admin import admin_panel, admin_button
+    filters
+)
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from admin import admin_panel, admin_button
 import sqlite3
 
-TOKEN = "8350441049:AAHEaYW3qaJPT0k761ScXDUqgufhwomSErI"
+TOKEN = "YOUR_BOT_TOKEN"
 
 # ================= DB =================
 conn = sqlite3.connect("movies.db", check_same_thread=False)
@@ -34,8 +34,12 @@ def clean(name):
 async def save_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.video:
         file_id = update.message.video.file_id
-        name = update.message.caption or "unknown"
-        name = clean(name)
+
+        if not update.message.caption:
+            await update.message.reply_text("❌ Caption madhe movie name dya")
+            return
+
+        name = clean(update.message.caption)
 
         cur.execute(
             "INSERT INTO movies VALUES (?, ?, ?)",
@@ -43,11 +47,11 @@ async def save_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         conn.commit()
 
-        await update.message.reply_text("Movie saved 👍")
+        await update.message.reply_text("✅ Movie saved 👍")
 
 # ================= START =================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Bot ready 👍 Send movie with caption")
+    await update.message.reply_text("🎬 Bot ready! Send movie with caption")
 
 # ================= SEARCH =================
 async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -57,10 +61,11 @@ async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = cur.fetchone()
 
     if data:
+        file_id = data[0]
         from premium import send_temp_movie
         await send_temp_movie(update, context, file_id)
     else:
-        await update.message.reply_text("Movie not found 😢")
+        await update.message.reply_text("❌ Movie not found 😢")
 
 # ================= APP =================
 app = Application.builder().token(TOKEN).build()
@@ -70,5 +75,6 @@ app.add_handler(MessageHandler(filters.VIDEO, save_movie))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search))
 app.add_handler(CommandHandler("admin", admin_panel))
 app.add_handler(CallbackQueryHandler(admin_button))
-print("Bot starting...")
+
+print("🚀 Bot starting...")
 app.run_polling(drop_pending_updates=True)
