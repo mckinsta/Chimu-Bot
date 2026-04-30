@@ -41,10 +41,9 @@ async def save_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         name = clean(update.message.caption)
 
-        cur.execute(
-            "INSERT INTO movies VALUES (?, ?, ?)",
-            (name, 1, file_id)
-        )
+        print("SAVED:", name)   # 👈 add this
+
+        cur.execute("INSERT INTO movies VALUES (?, ?, ?)", (name, 1, file_id))
         conn.commit()
 
         await update.message.reply_text("✅ Movie saved 👍")
