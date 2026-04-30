@@ -50,7 +50,7 @@ async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data:
         from premium import send_temp_movie
-await send_temp_movie(update, context, file_id)
+        await send_temp_movie(update, context, file_id)
     else:
         await update.message.reply_text("Movie not found 😢")
 
