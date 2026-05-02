@@ -1,48 +1,32 @@
-import sqlite3
+import os
+import psycopg2
+from dotenv import load_dotenv
 
-conn = sqlite3.connect("movies.db", check_same_thread=False)
+load_dotenv()
+
+conn = psycopg2.connect(os.getenv("postgresql://postgres:mliuDwAAMNJQkuGSrRfJFsnTgEffqgBt@switchyard.proxy.rlwy.net:30661/railway"))
 cur = conn.cursor()
 
-# ================= TABLE =================
 cur.execute("""
 CREATE TABLE IF NOT EXISTS movies (
+    id SERIAL PRIMARY KEY,
     name TEXT,
     part INTEGER,
     file_id TEXT
 )
 """)
-
 conn.commit()
 
-# ================= CLEAN NAME =================
-def clean(name):
-    return name.lower().strip().replace(".mp4", "")
-
-# ================= ADD MOVIE =================
 def add_movie(name, part, file_id):
-    name = clean(name)
-
     cur.execute(
-        "INSERT INTO movies VALUES (?, ?, ?)",
-        (name, part, file_id)
+        "INSERT INTO movies (name, part, file_id) VALUES (%s, %s, %s)",
+        (name.lower().strip(), part, file_id)
     )
     conn.commit()
 
-# ================= GET PARTS =================
-def get_parts(name):
-    name = clean(name)
-
-    cur.execute("SELECT part FROM movies WHERE name=?", (name,))
-    return [i[0] for i in cur.fetchall()]
-
-# ================= GET SPECIFIC PART =================
-def get_movie(name, part):
-    name = clean(name)
-
+def get_movie(name):
     cur.execute(
-        "SELECT file_id FROM movies WHERE name=? AND part=?",
-        (name, part)
+        "SELECT file_id FROM movies WHERE name=%s ORDER BY part",
+        (name.lower().strip(),)
     )
-
-    data = cur.fetchone()
-    return data[0] if data else None
+    return cur.fetchall()
