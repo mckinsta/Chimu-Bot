@@ -1,98 +1,70 @@
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    CallbackQueryHandler,
-    ContextTypes,
-    filters
-)
+import os
+import asyncio
+from dotenv import load_dotenv
 from telegram import Update
-from admin import admin_panel, admin_button
-import sqlite3
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from db import add_movie, get_movie
 
-TOKEN = "8350441049:AAGAPMWWK3NBxCaMAO-nz-x--N1-AwJHBWs"
+load_dotenv()
 
-# ================= DB =================
-conn = sqlite3.connect("movies.db", check_same_thread=False)
-cur = conn.cursor()
+TOKEN = os.getenv("8350441049:AAGAPMWWK3NBxCaMAO-nz-x--N1-AwJHBWs")
+ADMIN_ID = int(os.getenv("1489423238"))
 
-cur.execute("""
-CREATE TABLE IF NOT EXISTS movies (
-    name TEXT,
-    part INTEGER,
-    file_id TEXT
-)
-""")
-
-# 🔥 speed sathi index
-cur.execute("CREATE INDEX IF NOT EXISTS idx_name ON movies(name)")
-conn.commit()
-
-# ================= CLEAN =================
-def clean(name):
-    return name.lower().strip().replace(".mp4", "")
-
-# ================= START =================
+# START
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🎬 Bot ready!")
+    await update.message.reply_text("🎬 Movie Bot Ready!\nSend movie name.")
 
-# ================= SAVE =================
+# SAVE MOVIE (ADMIN ONLY)
 async def save_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message.video:
+    if update.effective_user.id != ADMIN_ID:
         return
 
-    if not update.message.caption:
-        await update.message.reply_text("❌ Caption madhe movie name dya")
-        return
+    if update.message.video or update.message.document:
+        file = update.message.video or update.message.document
+        caption = update.message.caption
 
-    file_id = update.message.video.file_id
-    name = clean(update.message.caption)
+        if not caption:
+            await update.message.reply_text("❌ Caption format:\nMovieName 1")
+            return
 
-    cur.execute(
-        "INSERT INTO movies VALUES (?, ?, ?)",
-        (name, 1, file_id)
-    )
-    conn.commit()
+        try:
+            name, part = caption.rsplit(" ", 1)
+            part = int(part)
+        except:
+            await update.message.reply_text("❌ Format wrong\nExample: KGF 1")
+            return
 
-    await update.message.reply_text("✅ Saved")
+        add_movie(name, part, file.file_id)
+        await update.message.reply_text(f"✅ Saved: {name} Part {part}")
 
-# ================= SEARCH =================
+# SEARCH MOVIE
 async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = clean(update.message.text)
+    name = update.message.text
+    results = get_movie(name)
 
-    cur.execute(
-        "SELECT file_id FROM movies WHERE name LIKE ? LIMIT 1",
-        (f"%{text}%",)
-    )
-    data = cur.fetchone()
-
-    if data:
-        file_id = data[0]
-
-        # 🔥 FASTEST METHOD
-        await context.bot.send_video(
-            chat_id=update.effective_chat.id,
-            video=file_id
-        )
-    else:
+    if not results:
         await update.message.reply_text("❌ Movie not found")
+        return
 
-# ================= APP =================
-app = Application.builder().token(TOKEN).build()
+    for file_id in results:
+        msg = await update.message.reply_video(file_id[0])
 
-app.add_handler(CommandHandler("start", start))
+        # ⏳ AUTO DELETE AFTER 5 MIN
+        await asyncio.sleep(300)
+        try:
+            await msg.delete()
+        except:
+            pass
 
-# 🎥 save
-app.add_handler(MessageHandler(filters.VIDEO, save_movie))
+def main():
+    app = Application.builder().token(TOKEN).build()
 
-# 🔍 search
-app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND,
-    search
-))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.VIDEO | filters.Document.ALL, save_movie))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search))
 
-app.add_handler(CommandHandler("admin", admin_panel))
-app.add_handler(CallbackQueryHandler(admin_button))
+    print("Bot running 🔥")
+    app.run_polling()
 
-print("🚀 Fast Bot Started")
-app.run_polling(drop_pending_updates=True)
+if __name__ == "__main__":
+    main()
