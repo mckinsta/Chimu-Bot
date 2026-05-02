@@ -1,18 +1,38 @@
 import os
+import sqlite3
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
-from db import add_movie, get_movie
 
 load_dotenv()
 
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
-# 🔁 temp storage (2-step save)
+# ================= DB =================
+conn = sqlite3.connect("movies.db", check_same_thread=False)
+cur = conn.cursor()
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS movies (
+    name TEXT,
+    file_id TEXT
+)
+""")
+conn.commit()
+
+def add_movie(name, file_id):
+    cur.execute("INSERT INTO movies VALUES (?, ?)", (name.lower(), file_id))
+    conn.commit()
+
+def get_movie(name):
+    cur.execute("SELECT file_id FROM movies WHERE name=?", (name.lower(),))
+    return cur.fetchall()
+
+# ================= TEMP STORAGE =================
 pending = {}
 
-# 🎥 STEP 1: receive video
+# ================= ADMIN: RECEIVE VIDEO =================
 async def receive_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -25,34 +45,28 @@ async def receive_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("📥 Video received!\nNow send: MovieName 1")
 
-
-# 📝 STEP 2: receive name
+# ================= ADMIN: SAVE NAME =================
 async def receive_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
-    if user_id != ADMIN_ID:
-        return
-
-    if user_id not in pending:
+    if user_id != ADMIN_ID or user_id not in pending:
         return
 
     text = update.message.text
 
     try:
         name, part = text.rsplit(" ", 1)
-        part = int(part)
     except:
         await update.message.reply_text("❌ Format: MovieName 1")
         return
 
     file_id = pending.pop(user_id)
 
-    add_movie(name, part, file_id)
+    add_movie(name, file_id)
 
-    await update.message.reply_text(f"✅ Saved: {name} Part {part}")
+    await update.message.reply_text(f"✅ Saved: {name}")
 
-
-# 🔍 SEARCH
+# ================= SEARCH =================
 async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = update.message.text
 
@@ -62,33 +76,27 @@ async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Not found")
         return
 
-    for file_id in results:
-        await update.message.reply_video(file_id[0])
+    for row in results:
+        await update.message.reply_video(row[0])
 
-
-# 🧠 HANDLE TEXT (fix for conflict)
+# ================= MAIN ROUTER =================
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
-    if user_id in pending:
+    if user_id == ADMIN_ID and user_id in pending:
         await receive_name(update, context)
     else:
         await search(update, context)
 
-
-# 🚀 MAIN
+# ================= MAIN =================
 def main():
     app = Application.builder().token(TOKEN).build()
 
-    # 🎥 video handler
     app.add_handler(MessageHandler(filters.VIDEO | filters.Document.ALL, receive_video))
-
-    # 📝 text handler (combined)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
-    print("Bot running 🔥")
+    print("🔥 Bot running...")
     app.run_polling()
-
 
 if __name__ == "__main__":
     main()
