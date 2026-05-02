@@ -10,7 +10,7 @@ from telegram import Update
 from admin import admin_panel, admin_button
 import sqlite3
 
-TOKEN = "8350441049:AAHEaYW3qaJPT0k761ScXDUqgufhwomSErI"
+TOKEN = "8350441049:AAGAPMWWK3NBxCaMAO-nz-x--N1-AwJHBWs"
 
 # ================= DB =================
 conn = sqlite3.connect("movies.db", check_same_thread=False)
