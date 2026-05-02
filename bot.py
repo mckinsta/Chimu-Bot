@@ -1,8 +1,7 @@
 import os
-import asyncio
 from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, MessageHandler, filters, ContextTypes
 from db import add_movie, get_movie
 
 load_dotenv()
@@ -10,66 +9,62 @@ load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
-# START
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🎬 Movie Bot Ready!\nSend movie name.")
+# 🔁 temp storage
+pending = {}
 
-# SAVE MOVIE (ADMIN ONLY)
-async def save_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("User ID:", update.effective_user.id)
-
-    # 🔒 admin check
+# 🎥 STEP 1: receive video
+async def receive_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
-        print("Not admin ❌")
         return
 
-    if update.message.video or update.message.document:
-        file = update.message.video or update.message.document
-        caption = update.message.caption
+    file = update.message.video or update.message.document
+    if not file:
+        return
 
-        print("Caption:", caption)
+    pending[update.effective_user.id] = file.file_id
 
-        if not caption:
-            await update.message.reply_text("❌ Caption tak: MovieName 1")
-            return
+    await update.message.reply_text("📥 Video received!\nNow send: MovieName 1")
 
-        try:
-            name, part = caption.rsplit(" ", 1)
-            part = int(part)
-        except:
-            await update.message.reply_text("❌ Format wrong\nExample: KGF 1")
-            return
+# 📝 STEP 2: receive name
+async def receive_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
 
-        add_movie(name, part, file.file_id)
+    if update.effective_user.id not in pending:
+        return
 
-        print("Saved:", name, part, file.file_id)
+    text = update.message.text
 
-        await update.message.reply_text(f"✅ Saved: {name} Part {part}")
+    try:
+        name, part = text.rsplit(" ", 1)
+        part = int(part)
+    except:
+        await update.message.reply_text("❌ Format: MovieName 1")
+        return
 
-# SEARCH MOVIE
+    file_id = pending.pop(update.effective_user.id)
+
+    add_movie(name, part, file_id)
+
+    await update.message.reply_text(f"✅ Saved: {name} Part {part}")
+
+# 🔍 SEARCH
 async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    name = update.message.text
-    results = get_movie(name)
+    results = get_movie(update.message.text)
 
     if not results:
-        await update.message.reply_text("❌ Movie not found")
+        await update.message.reply_text("❌ Not found")
         return
 
     for file_id in results:
-        msg = await update.message.reply_video(file_id[0])
+        await update.message.reply_video(file_id[0])
 
-        # ⏳ AUTO DELETE AFTER 5 MIN
-        await asyncio.sleep(300)
-        try:
-            await msg.delete()
-        except:
-            pass
-
+# 🚀 MAIN
 def main():
     app = Application.builder().token(TOKEN).build()
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.VIDEO | filters.Document.ALL, save_movie))
+    app.add_handler(MessageHandler(filters.VIDEO | filters.Document.ALL, receive_video))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, receive_name))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search))
 
     print("Bot running 🔥")
