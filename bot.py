@@ -7,7 +7,7 @@ from db import add_movie, get_movie
 
 load_dotenv()
 
-TOKEN = os.getenv("8350441049:AAGAPMWWK3NBxCaMAO-nz-x--N1-AwJHBWs")
+TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
 # START
