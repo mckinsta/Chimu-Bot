@@ -8,7 +8,7 @@ from db import add_movie, get_movie
 load_dotenv()
 
 TOKEN = os.getenv("8350441049:AAGAPMWWK3NBxCaMAO-nz-x--N1-AwJHBWs")
-ADMIN_ID = int(os.getenv("1489423238"))
+ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
 # START
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
