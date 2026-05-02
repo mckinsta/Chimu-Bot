@@ -16,15 +16,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # SAVE MOVIE (ADMIN ONLY)
 async def save_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("User ID:", update.effective_user.id)
+
+    # 🔒 admin check
     if update.effective_user.id != ADMIN_ID:
+        print("Not admin ❌")
         return
 
     if update.message.video or update.message.document:
         file = update.message.video or update.message.document
         caption = update.message.caption
 
+        print("Caption:", caption)
+
         if not caption:
-            await update.message.reply_text("❌ Caption format:\nMovieName 1")
+            await update.message.reply_text("❌ Caption tak: MovieName 1")
             return
 
         try:
@@ -35,6 +41,9 @@ async def save_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         add_movie(name, part, file.file_id)
+
+        print("Saved:", name, part, file.file_id)
+
         await update.message.reply_text(f"✅ Saved: {name} Part {part}")
 
 # SEARCH MOVIE
